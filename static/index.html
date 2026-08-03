@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSL Checker — Analyse de Certificats SSL/TLS</title>
+    <link rel="stylesheet" href="index.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+</head>
+
+<body>
+
+    <!-- Hero Section -->
+    <section id="hero-section" class="hero">
+        <div class="hero-container">
+            <div class="hero-branding">
+                <div class="hero-icon"> <img src="logo.png" alt="Logo"> </div>
+            </div>
+
+            <div class="hero-form-card">
+                <div class="form-row">
+                    <div class="input-group">
+                        <label for="domain-input">Nom de domaine</label>
+                        <input type="text" id="domain-input" placeholder="exemple.com" autocomplete="off">
+                    </div>
+                    <div class="input-group input-group-small">
+                        <label for="port-input">Port</label>
+                        <input type="number" id="port-input" value="443">
+                    </div>
+                </div>
+                <div class="scan-type-label">Type de scan de port</div>
+                <div class="scan-type-toggle">
+                    <button type="button" class="scan-type-btn active" id="btn-rapide" data-type="rapide">
+                        <i class="fa-solid fa-bolt"></i>
+                        Rapide
+                    </button>
+                    <button type="button" class="scan-type-btn" id="btn-complet" data-type="complet">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        Complet
+                    </button>
+                </div>
+
+                <button id="scan-button" class="btn-primary">
+                    <span>Lancer l'analyse</span>
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path d="M8 2v12M2 8h12" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                    </svg>
+                </button>
+            </div>
+
+
+        </div>
+    </section>
+
+    <!-- Dashboard Section -->
+    <section id="dashboard-section" class="dashboard hidden">
+        <div class="dashboard-container">
+
+            <!-- Dashboard Header -->
+            <header class="dashboard-header">
+                <button id="new-scan-button" class="btn-back">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                        <path d="M12 16l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                    </svg>
+                    <span>Nouvelle analyse</span>
+                </button>
+                <div class="header-domain">
+                    <h2 id="domain-name">—</h2>
+                    <div class="header-domain-meta">
+                        <span id="port-display" class="header-port">Port : 443</span>
+                        <span id="scan-type-badge" class="scan-type-badge scan-type-rapide">Analyse rapide</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Status Bar -->
+            <div id="status-bar" class="status-bar">
+                <div class="status-content">
+                    <div class="status-spinner" id="status-spinner"></div>
+                    <span id="status-text" class="status-message">Connexion au serveur...</span>
+                </div>
+                <div class="status-progress">
+                    <div id="progress-fill" class="status-progress-fill"></div>
+                </div>
+            </div>
+
+            <!-- Port Warning Message -->
+            <div id="port-warning" class="port-warning hidden">
+                <div class="port-warning-icon">⚠️</div>
+                <div class="port-warning-content">
+                    <h3>Port Non-HTTPS Détecté</h3>
+                    <p>Cette analyse est optimisée pour HTTPS (port 443). Le port <strong
+                            id="warning-port-num"></strong> n'est pas supporté pour une analyse SSL/TLS complète.</p>
+                    <p>Veuillez utiliser le port 443 pour obtenir des résultats fiables.</p>
+                </div>
+            </div>
+
+            <!-- Summary Scores -->
+            <div class="summary-grid">
+                <div class="summary-card" id="cert-score-card" data-target="cert-problemes-content" tabindex="0"
+                    role="button" aria-label="Voir détails Certificat">
+                    <div class="summary-label">Certificat</div>
+                    <div class="summary-value-wrap">
+                        <div class="summary-skeleton"></div>
+                        <div class="summary-value hidden" id="cert-score">—</div>
+                    </div>
+                    <div class="score-tooltip">
+                        <div class="score-tooltip-title">Certificat <span class="score-tooltip-weight">100 pts</span>
+                        </div>
+                        <ul style="font-size: 0.72rem;">
+                            <li>Validité temporelle <span class="tt-good">25 pts</span></li>
+                            <li>Chaîne de certification <span class="tt-good">25 pts</span></li>
+                            <li>Force de la clé publique <span class="tt-good">20 pts</span></li>
+                            <li>Algorithme de signature <span class="tt-good">10 pts</span></li>
+                            <li>Extensions de sécurité <span class="tt-good">10 pts</span></li>
+                            <li>Statut de révocation <span class="tt-good">10 pts</span></li>
+                        </ul>
+                        <div class="score-tooltip-hint">Cliquer pour voir les avertissements</div>
+                    </div>
+                </div>
+                <div class="summary-card" id="protocol-score-card" data-target="section-proto" tabindex="0"
+                    role="button" aria-label="Voir détails Protocoles">
+                    <div class="summary-label">Protocoles</div>
+                    <div class="summary-value-wrap">
+                        <div class="summary-skeleton"></div>
+                        <div class="summary-value hidden" id="protocol-score">—</div>
+                    </div>
+                    <div class="score-tooltip">
+                        <div class="score-tooltip-title">Protocoles <span class="score-tooltip-weight">× 30%</span></div>
+                        <ul style="font-size: 0.72rem;">
+                            <li>TLS 1.3 <span class="tt-good">100 (Max) / -0</span></li>
+                            <li>TLS 1.2 <span class="tt-good">80 (Max) / -5</span></li>
+                            <li>TLS 1.1 <span class="tt-warn">50 (Max) / -10</span></li>
+                            <li>TLS 1.0 <span class="tt-bad">30 (Max) / -20</span></li>
+                            <li>SSL 2/3 <span class="tt-bad">0 pt (Fatal)</span></li>
+                        </ul>
+                        <div class="score-tooltip-sub">Note de base (Meilleur) - Pénalités (Anciens)</div>
+                        <div class="score-tooltip-hint">Cliquer pour voir la section</div>
+                    </div>
+                </div>
+                <div class="summary-card" id="cipher-score-card" data-target="section-cipher" tabindex="0" role="button"
+                    aria-label="Voir détails Chiffrement">
+                    <div class="summary-label">Chiffrement</div>
+                    <div class="summary-value-wrap">
+                        <div class="summary-skeleton"></div>
+                        <div class="summary-value hidden" id="cipher-score">—</div>
+                    </div>
+                    <div class="score-tooltip">
+                        <div class="score-tooltip-title">Chiffrement <span class="score-tooltip-weight">× 40%</span>
+                        </div>
+                        <ul>
+                            <li>Taille ≥ 256 bits <span class="tt-good">+10 pts</span></li>
+                            <li>Mode CBC <span class="tt-good">60 pts</span></li>
+                            <li>3DES ou 128-256 bits <span class="tt-warn">40 pts</span></li>
+                            <li>RC4 <span class="tt-bad">20 pts</span></li>
+                            <li>NULL, ANON, EXPORT, MD5, DES <span class="tt-bad">0 pt</span></li>
+                        </ul>
+                        <div class="score-tooltip-sub">Moyenne des notes sur tous les ciphers détectés</div>
+                        <div class="score-tooltip-hint">Cliquer pour voir la section</div>
+                    </div>
+                </div>
+                <div class="summary-card" id="key-score-card" data-target="section-key" tabindex="0" role="button"
+                    aria-label="Voir détails Échange de clés">
+                    <div class="summary-label">Échange Clé</div>
+                    <div class="summary-value-wrap">
+                        <div class="summary-skeleton"></div>
+                        <div class="summary-value hidden" id="key-score">—</div>
+                    </div>
+                    <div class="score-tooltip">
+                        <div class="score-tooltip-title">Échange de clés <span class="score-tooltip-weight">×
+                                30%</span></div>
+                        <ul style="font-size: 0.72rem;">
+                            <li>Taille ≥ 7680 <span class="tt-good">100 pts</span></li>
+                            <li>Taille ≥ 4096 / ≥ 3072 <span class="tt-good">90 / 80 pts</span></li>
+                            <li>Taille ≥ 2048 <span class="tt-good">70 pts</span></li>
+                            <li>Taille ≥ 1534 / ≥ 1024 <span class="tt-warn">40 / 20 pts</span></li>
+                            <li>≤ 1024, EXPORT, anonyme <span class="tt-bad">0 pt</span></li>
+                        </ul>
+                        <div class="score-tooltip-sub">Moyenne des notes sur tous les échanges</div>
+                        <div class="score-tooltip-hint">Cliquer pour voir la section</div>
+                    </div>
+                </div>
+                <div class="summary-card summary-card-global" id="global-score-card">
+                    <div class="summary-label">Note Finale</div>
+                    <div class="summary-value-wrap">
+                  <div class="summary-skeleton"></div>
+                        <div class="summary-value hidden" id="global-score">—</div>
+                    </div>
+                    <div class="summary-grade hidden" id="global-evaluation">—</div>
+                    <div class="score-tooltip score-tooltip-global">
+                        <div class="score-tooltip-title">Note Finale</div>
+                        <div class="score-tooltip-formula">
+                            <span class="tt-term">Cipher × 0.40</span>
+                            <span class="tt-op">+</span>
+                            <span class="tt-term">Proto × 0.30</span>
+                            <span class="tt-op">+</span>
+                            <span class="tt-term">Clé × 0.30</span>
+                        </div>
+                        <div class="score-tooltip-grades">
+                            <span class="tt-grade A">A ≥ 75</span>
+                            <span class="tt-grade B">B ≥ 50</span>
+                            <span class="tt-grade F">F &lt; 50</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Data Sections -->
+            <div class="data-sections">
+
+                <!-- Certificat Section -->
+                <div class="section" id="section-cert">
+                    <h3 class="section-title">Certificat SSL/TLS</h3>
+                    <div class="section-grid">
+                        <div class="data-card">
+                            <div class="data-card-header">
+                                <span class="data-icon"><i class="fa-solid fa-calendar"></i></span>
+                                <h4>Validité</h4>
+                            </div>
+                            <div id="cert-validite-content" class="data-card-content">
+                                <div class="loading-state">
+                                    <div class="spinner-ring"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="data-card">
+                            <div class="data-card-header">
+                                <span class="data-icon"><i class="fa-solid fa-building-columns"></i></span>
+                                <h4>Autorité</h4>
+                            </div>
+                            <div id="cert-autorite-content" class="data-card-content">
+                                <div class="loading-state">
+                                    <div class="spinner-ring"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="data-card">
+                            <div class="data-card-header">
+                                <span class="data-icon"><i class="fa-solid fa-key"></i></span>
+                                <h4>Clé Publique</h4>
+                            </div>
+                            <div id="cert-cle-content" class="data-card-content">
+                                <div class="loading-state">
+                                    <div class="spinner-ring"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="data-card">
+                            <div class="data-card-header">
+                                <span class="data-icon"><i class="fa-solid fa-signature"></i></span>
+                                <h4>Signature</h4>
+                            </div>
+                            <div id="cert-signature-content" class="data-card-content">
+                                <div class="loading-state">
+                                    <div class="spinner-ring"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="data-card">
+                            <div class="data-card-header">
+                                <span class="data-icon"><i class="fa-solid fa-clipboard"></i></span>
+                                <h4>Extensions</h4>
+                            </div>
+                            <div id="cert-extensions-content" class="data-card-content">
+                                <div class="loading-state">
+                                    <div class="spinner-ring"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="data-card">
+                            <div class="data-card-header">
+                                <span class="data-icon"><i class="fa-solid fa-link"></i></span>
+                                <h4>Chaîne</h4>
+                            </div>
+                            <div id="cert-chaine-content" class="data-card-content">
+                                <div class="loading-state">
+                                    <div class="spinner-ring"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="data-card">
+                            <div class="data-card-header">
+                                <span class="data-icon"><i class="fa-solid fa-ban"></i></span>
+                                <h4>Révocation</h4>
+                            </div>
+                            <div id="cert-revocation-content" class="data-card-content">
+                                <div class="loading-state">
+                                    <div class="spinner-ring"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="data-card">
+                            <div class="data-card-header">
+                                <span class="data-icon"><i class="fa-solid fa-circle-exclamation"></i></span>
+                                <h4>Problèmes &amp; Avertissements</h4>
+                            </div>
+                            <div id="cert-problemes-content" class="data-card-content">
+                                <div class="loading-state">
+                                    <div class="spinner-ring"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Protocoles & Chiffrement Section -->
+                <div class="section" id="section-proto">
+                    <span id="section-cipher"
+                        style="display:block;position:relative;top:-80px;visibility:hidden"></span>
+                    <h3 class="section-title">Protocoles & Chiffrement</h3>
+                    <div class="section-grid">
+                        <div class="data-card">
+                            <div class="data-card-header">
+                                <span class="data-icon"><i class="fa-solid fa-up-down"></i></span>
+                                <h4>Protocoles Supportés</h4>
+                            </div>
+                            <div id="protocol-content" class="data-card-content">
+                                <div class="loading-state">
+                                    <div class="spinner-ring"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="data-card data-card-wide">
+                            <div class="data-card-header">
+                                <span class="data-icon"><i class="fa-solid fa-lock-open"></i></span>
+                                <h4>Suites Chiffrées</h4>
+                            </div>
+                            <div id="cipher-content" class="data-card-content">
+                                <div class="loading-state">
+                                    <div class="spinner-ring"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Échange de Clés Section -->
+                <div class="section" id="section-key">
+                    <h3 class="section-title">Échange de Clés</h3>
+                    <div class="section-grid">
+                        <div class="data-card">
+                            <div class="data-card-header">
+                                <span class="data-icon"><i class="fa-solid fa-arrows-rotate"></i></span>
+                                <h4>ECDHE</h4>
+                            </div>
+                            <div id="key-ecdhe-content" class="data-card-content">
+                                <div class="loading-state">
+                                    <div class="spinner-ring"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="data-card">
+                            <div class="data-card-header">
+                                <span class="data-icon"><i class="fa-solid fa-shuffle"></i></span>
+                                <h4>DHE / DH / RSA</h4>
+                            </div>
+                            <div id="key-other-content" class="data-card-content">
+                                <div class="loading-state">
+                                    <div class="spinner-ring"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="data-card">
+                            <div class="data-card-header">
+                                <span class="data-icon"><i class="fa-solid fa-code-branch"></i></span>
+                                <h4>ECDH</h4>
+                            </div>
+                            <div id="key-ecdh-content" class="data-card-content">
+                                <div class="loading-state">
+                                    <div class="spinner-ring"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Compatibilité OS Section -->
+                <div class="section">
+                    <h3 class="section-title">Compatibilité OS/Navigateurs</h3>
+                    <div class="section-grid">
+                        <div class="data-card data-card-full">
+                            <div class="data-card-header">
+                                <span class="data-icon"><i class="fa-solid fa-laptop-code"></i></span>
+                                <h4>Clients Compatibles</h4>
+                            </div>
+                            <div id="compat-content" class="data-card-content">
+                                <div class="loading-state">
+                                    <div class="spinner-ring"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Analyse des Ports Section -->
+                <div class="section">
+                    <h3 class="section-title">Analyse des Ports</h3>
+                    <div class="section-grid">
+                        <div class="data-card data-card-wide">
+                            <div class="data-card-header">
+                                <span class="data-icon"><i class="fa-solid fa-network-wired"></i></span>
+                                <h4>Ports Ouverts</h4>
+                            </div>
+                            <div id="ports-content" class="data-card-content">
+                                <div class="loading-state">
+                                    <div class="spinner-ring"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="data-card">
+                            <div class="data-card-header">
+                                <span class="data-icon"><i class="fa-solid fa-shield-halved"></i></span>
+                                <h4>État de Sécurité</h4>
+                            </div>
+                            <div id="ports-status-content" class="data-card-content">
+                                <div class="loading-state">
+                                    <div class="spinner-ring"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sécurité Section -->
+                <div class="section">
+                    <h3 class="section-title">Analyse de Sécurité</h3>
+                    <div class="section-grid">
+                        <div class="data-card data-card-wide">
+                            <div class="data-card-header">
+                                <span class="data-icon"><i class="fa-solid fa-triangle-exclamation"></i></span>
+                                <h4>Vulnérabilités</h4>
+                            </div>
+                            <div id="vuln-content" class="data-card-content">
+                                <div class="loading-state">
+                                    <div class="spinner-ring"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="data-card">
+                            <div class="data-card-header">
+                                <span class="data-icon"><i class="fa-solid fa-chart-line"></i></span>
+                                <h4>Résumé de Sécurité</h4>
+                            </div>
+                            <div id="vuln-resume-content" class="data-card-content">
+                                <div class="loading-state">
+                                    <div class="spinner-ring"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Back to top bar — shown when scan is complete -->
+            <div id="back-to-top-bar" class="back-to-top-bar hidden">
+                <button class="back-to-top-inline" id="back-to-top-inline-btn">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path d="M3 10l5-5 5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                    </svg>
+                    Retour en haut
+                </button>
+            </div>
+
+        </div>
+    </section>
+
+    <button id="back-to-top" class="back-to-top hidden" aria-label="Remonter en haut">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 15l-6-6-6 6" />
+        </svg>
+    </button>
+
+    <script src="index.js"></script>
+
+</body>
+
+</html>
